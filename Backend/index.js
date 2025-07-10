@@ -8,6 +8,7 @@ const cors=require("cors");// cors (Cross-Origin Resource Sharing) is a middlewa
 
 const jwt=require("jsonwebtoken");//jsonwebtoken is used for generating and verifying JWT tokens, which are a way to securely authenticate users once they're logged in.
 const User = require("./models/user.model");
+const { authenticateToken } = require("./utilities");
 
 
 mongoose.connect(config.connectionString);
@@ -67,6 +68,58 @@ app.post("/create-account",async(req,res)=>{
     });
 
 });
+
+//Login
+app.post("/login",async(req,res)=>{
+    const{email, password}=req.body;
+
+    if(!email || !password){
+        return res.status(400).json({message:"Email and Password are required"});
+    }
+
+    const user=await User.findOne({email});
+
+    if(!user){
+        return res.status(400).json({message:"User not found"});
+    }
+
+    const isPasswordValid=await bcrypt.compare(password, user.password);
+    if(!isPasswordValid){
+        return res.status(400).json({message:"Invalid Credentials"});
+    }
+
+    const accessToken=jwt.sign(  //➡️ You're calling the sign function from the jsonwebtoken (jwt) library to create a token.
+        {userId: user._id},  //➡️ This is the data (payload) you're putting inside the token.Here, you're putting the user's _id (from the MongoDB user object) in the token.So the token will remember which user it belongs to.
+        process.env.ACCESS_TOKEN_SECRET,
+        {
+            expiresIn: "72h",  // This is the secret key used to sign (encrypt) the token.You're loading it from the .env file (ACCESS_TOKEN_SECRET=yoursecretkey), which keeps it safe and hidden.Only your server should know this secret — it’s used to verify if the token is valid later.
+        }
+    );
+
+    return res.json({
+        error:false,
+        message: "Login Succesful",
+        user: { fullName: user.fullName, email: user.email },
+        accessToken,
+    });
+});
+
+//Get User
+app.get("/get-user", authenticateToken, async(req,res)=>{
+    const {userId}=req.user;
+
+    const isUser=await User.findOne({_id: userId});
+
+    if(!isUser){
+        return res.sendStatus(401);
+    }
+
+    return res.json({
+        user: isUser,
+        message: "",
+    });
+});
+
 
 app.listen(8000, () => {
   console.log("🚀 Server running on http://localhost:8000");
