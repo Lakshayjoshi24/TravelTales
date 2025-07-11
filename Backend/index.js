@@ -6,8 +6,15 @@ const bcrypt=require("bcrypt"); //bcrypt is a library used to hash passwords sec
 const express=require("express");//express is a Node.js web framework that simplifies building APIs. This line imports it so we can use it to create our server and routes.
 const cors=require("cors");// cors (Cross-Origin Resource Sharing) is a middleware that allows your frontend (e.g., React on localhost:5173) to talk to your backend (e.g., Express on localhost:8000).
 
+const upload=require("./multer");
+const fs=require("fs");
+const path=require("path");
+
 const jwt=require("jsonwebtoken");//jsonwebtoken is used for generating and verifying JWT tokens, which are a way to securely authenticate users once they're logged in.
+
 const User = require("./models/user.model");
+const travelTales=require("./models/travelTales.model");
+
 const { authenticateToken } = require("./utilities");
 
 
@@ -119,6 +126,69 @@ app.get("/get-user", authenticateToken, async(req,res)=>{
         message: "",
     });
 });
+
+//Add Travel Story
+app.post("/add-travel-story", authenticateToken, async(req,res)=>{
+    const {title, story, visitedLocation, imageUrl, visitedDate}=req.body || {};
+    const {userId}=req.user;
+
+    //Validate required fields
+    if(!title || !story || !visitedLocation || !imageUrl || !visitedDate){
+        return res.status(400).json({error: true, message: "All fields are required"});
+    }
+
+    //Convert visitedDate from miliseconds to date object
+    const parsedVisitedDate=new Date(parseInt(visitedDate));
+
+    try{
+        const travelTale=new travelTales({
+            title,
+            story,
+            visitedLocation,
+            userId,
+            imageUrl,
+            visitedDate: parsedVisitedDate,
+        });
+
+        await travelTale.save();
+        res.status(201).json({story:travelTale, message:'Added Successfully'});
+    }catch(error){
+        res.status(400).json({error:true, message:error.message });
+    }
+});
+
+//Get all travel story
+app.get("/get-all-stories", authenticateToken, async (req, res) => {
+  const { userId } = req.user;
+
+  try {
+    const stories = await travelTales.find({ userId }).sort({ isFavourite: -1 });
+    res.status(200).json({ stories });
+  } catch (error) {
+    res.status(500).json({ error: true, message: error.message });
+  }
+});
+
+//Route to handle image upload
+app.post("/image-upload", upload.single("image"), async (req, res) => {
+    try{
+        if(!req.file){
+            return res
+                .status(400)
+                .json({error: true, message: "No image uploaded"});
+        }
+
+        const imageUrl=`http://localhost:8000/uploads/${req.file.filename}`
+        
+        res.status(201).json({imageUrl});
+    }catch(error){
+        res.status(500).json({error:true, message:error.message});
+    }
+});
+
+
+
+
 
 
 app.listen(8000, () => {
