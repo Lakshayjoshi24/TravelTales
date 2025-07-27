@@ -1,1 +1,1 @@
-export const BASE_URL="http://localhost:8000"
+export const BASE_URL="https://traveltales-backend-4jp1.onrender.com"
