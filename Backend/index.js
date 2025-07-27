@@ -1,6 +1,6 @@
 require("dotenv").config();
 
-const config=require("./config.json");
+// const config=require("./config.json");
 const mongoose=require("mongoose");
 const bcrypt=require("bcrypt"); //bcrypt is a library used to hash passwords securely. You'll typically use it when users register (to store a hashed password), and during login (to compare plain text with hash).
 const express=require("express");//express is a Node.js web framework that simplifies building APIs. This line imports it so we can use it to create our server and routes.
@@ -19,12 +19,16 @@ const { authenticateToken } = require("./utilities");
 const { title } = require("process");
 
 
-mongoose.connect(config.connectionString);
+// mongoose.connect(config.connectionString);
+mongoose.connect(process.env.CONNECTION_STRING);
 
 
 const app=express();  //This creates an instance of an Express application. app will be used to define routes, middleware, etc.
 app.use(express.json());
 app.use(cors({origin:"*"}));//Enables CORS for all origins. This means any frontend app (on any domain) can send requests to your backend.
+
+const port = process.env.PORT || 8000;
+
 
 //Create Account 
 app.post("/create-account",async(req,res)=>{
@@ -368,11 +372,9 @@ app.get("/travel-tales/filter", authenticateToken, async(req,res)=>{
 });
 
 
-
-
-
-app.listen(8000, () => {
-  console.log("🚀 Server running on http://localhost:8000");
-}); // Starts the Express server on port 8000. Your backend will be available at http://localhost:8000.
+app.listen(port, () => {
+  console.log(`🚀 Server running on http://localhost:${port}`);
+});
+// Starts the Express server on port 8000. Your backend will be available at http://localhost:8000.
 
 module.exports=app;// This exports the app instance, which is helpful for testing or for splitting your server setup into multiple files. 
